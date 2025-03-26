@@ -40,11 +40,28 @@ theme_set(mytheme)
 
 ```{r upload}
 #load data and create a daily average data frame
-dailyload <- readxl::read_xlsx("./Data/load.xlsx") %>%
+dailyload <- readxl::read_xlsx("./Data/Raw/load.xlsx") %>%
     mutate(date = as.Date(date, format = "%Y-%m-%d")) %>%  
     rowwise() %>%
     mutate(daily_average = mean(c_across(h1:h24), na.rm = TRUE)) %>%  
     ungroup() %>%
     select(-c(h1:h24), -meter_id)
+```
+
+# Save Processed Data
+
+```{r}
+write.csv(dailyload, file = "~/Duke_R/TSA_Forecasting/Data/Processed/dailyload.csv",
+          row.names = FALSE)
+```
+
+# Basic Visualization
+
+```{r}
+daily_ts <- ts(dailyload[,2],
+               start = c(2005,01,01),
+               frequency = 365)
+
+autoplot(daily_ts)
 ```
 
