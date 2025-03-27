@@ -93,7 +93,7 @@ forecast_daily_mean_df <- data.frame(forecast_daily_mean) %>%
     `rownames<-`(NULL) 
 
 #write into csv
-write.csv(forecast_daily_snaive_df, 
+write.csv(forecast_daily_mean_df, 
           file = "~/Duke_R/TSA_Forecasting/Forecasts/forecast_daily_mean.csv",
           row.names = FALSE)
 ```
