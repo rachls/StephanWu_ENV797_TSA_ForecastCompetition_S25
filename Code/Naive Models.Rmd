@@ -37,6 +37,7 @@ theme_set(mytheme)
 ```
 
 # Daily Data
+
 ```{r}
 #create full, training, and test datasets
 dailyload <- read.csv("./Data/Processed/dailyload.csv")
@@ -62,7 +63,8 @@ daily_test_msts <- msts(dailyload_test[,2],
 ## Seasonal Data
 
 ### Geometric Mean
-Create a forecast using the training data and test it on the testing data. 
+
+Create a forecast using the training data and test it on the testing data.
 
 ```{r}
 #geometric mean on original data
@@ -98,10 +100,9 @@ write.csv(forecast_daily_mean_df,
           row.names = FALSE)
 ```
 
-
 ### Seasonal Naive Model
 
-Create a forecast using the training data and test it on the testing data. 
+Create a forecast using the training data and test it on the testing data.
 
 ```{r}
 #Seasonal naive on original data
@@ -136,4 +137,3 @@ write.csv(forecast_daily_snaive_df,
           file = "~/Duke_R/TSA_Forecasting/Forecasts/forecast_daily_snaive.csv",
           row.names = FALSE)
 ```
-

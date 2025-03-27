@@ -46,12 +46,23 @@ dailyload <- readxl::read_xlsx("./Data/Raw/load.xlsx") %>%
     mutate(daily_average = mean(c_across(h1:h24), na.rm = TRUE)) %>%  
     ungroup() %>%
     select(-c(h1:h24), -meter_id)
+
+hourlyload <- readxl::read_xlsx("./Data/Raw/load.xlsx") %>%
+    mutate(date = as.Date(date, format = "%Y-%m-%d")) %>%  
+    pivot_longer(cols = starts_with("h"),
+                 names_to = "hour",
+                 values_to = "load")%>%
+    mutate(hour = as.integer(substring(hour,2))) %>%
+    select(-meter_id)
 ```
 
 # Save Processed Data
 
 ```{r}
 write.csv(dailyload, file = "~/Duke_R/TSA_Forecasting/Data/Processed/dailyload.csv",
+          row.names = FALSE)
+
+write.csv(hourlyload, file = "~/Duke_R/TSA_Forecasting/Data/Processed/hourlyload.csv",
           row.names = FALSE)
 ```
 
