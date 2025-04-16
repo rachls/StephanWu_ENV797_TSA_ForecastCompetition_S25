@@ -1,11 +1,11 @@
 ---
-title: "Naive Models"
-author: "Rachael Stephan & Rosie Wu
-editor_options: 
-  chunk_output_type: console
+title: "Models Rosie"
+author: "Rosie Wu"
+date: "2025-04-01"
+output: html_document
 ---
 
-```{r chunks, include=FALSE}
+```{r setup, include=FALSE}
 #set up chunk options
 knitr::opts_chunk$set(echo = TRUE,tidy.opts=list(width.cutoff=80), 
                       tidy=FALSE) 
@@ -13,30 +13,12 @@ knitr::opts_chunk$set(warning = FALSE)
 knitr::opts_chunk$set(message = FALSE)
 ```
 
-```{r libraries, include = FALSE}
-#retrieve libraries
-library(here); library(ggplot2); library(forecast)
+```{r}
+library(here)
+library(ggplot2)
+library(forecast)
 library(tidyverse)
 ```
-
-```{r theme, include=FALSE}
-#create plot theme
-mytheme <- theme_bw(base_size = 10)+
-  theme(axis.title = element_text(size = 10, hjust = 0.5),
-        plot.title.position = "panel",
-        panel.border = element_rect(colour = "black", fill = NA, linewidth = 0.25),
-        plot.caption = element_text(hjust = 0),
-        legend.box = "vertical",
-        legend.location = "plot",
-        axis.gridlines = element_line(color = "grey", linewidth = 0.25),
-        axis.ticks = element_line(color = "black", linewidth = 0.5),
-        axis.grid = element_blank())
-
-#set plot theme
-theme_set(mytheme)
-```
-
-# Daily Data
 
 ```{r}
 #create full, training, and test datasets
@@ -60,7 +42,23 @@ daily_test_msts <- msts(dailyload_test[,2],
                         seasonal.periods =c(7,365.25))
 ```
 
+
 ## Seasonal Data
+### ARMA models, 
+
+
+### TBATs models
+```{r}
+model_tbats <- tbats(daily_train_msts)
+fc_tbats <- forecast(model_tbats)
+accuracy(fc_tbats, daily_test_msts)
+
+```
+
+
+
+### ETS Models
+
 
 ### Geometric Mean
 
@@ -96,8 +94,8 @@ forecast_daily_mean_df <- data.frame(forecast_daily_mean) %>%
 
 #write into csv
 write.csv(forecast_daily_mean_df, 
-          file = "./Forecasts/forecast_daily_mean.csv",
-          row.names = FALSE)
+          file = "~/Duke_R/TSA_Forecasting/Forecasts/forecast_daily_mean.csv",
+       row.names = FALSE)
 ```
 
 ### Seasonal Naive Model
@@ -134,6 +132,6 @@ forecast_daily_snaive_df <- data.frame(forecast_daily_snaive) %>%
 
 #write into csv
 write.csv(forecast_daily_snaive_df, 
-          file = "./Forecasts/forecast_daily_snaive.csv",
+          file = "./Data/Forecasts/forecast_daily_new.csv",
           row.names = FALSE)
 ```
