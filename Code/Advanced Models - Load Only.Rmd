@@ -1,0 +1,188 @@
+---
+title: "Advanced Load Forecasting"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+```{r chunks, include=FALSE}
+#set up chunk options
+knitr::opts_chunk$set(echo = TRUE,tidy.opts=list(width.cutoff=80), 
+                      tidy=FALSE) 
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+```
+
+```{r libraries, include=FALSE}
+#retrieve libraries
+library(here)
+library(ggplot2)
+library(forecast)
+library(cowplot)
+library(Kendall)
+library(tseries)
+library(kableExtra)
+library(dplyr)
+library(smooth)
+```
+
+# Preparation
+## Upload
+```{r include=FALSE}
+#upload test and training data
+load_daily <- read.csv("./Data/Processed/dailyload.csv")
+load_hourly <- read.csv("./Data/Processed/hourlyload.csv")
+
+#create msts
+load_daily_msts <- msts(load_daily$daily_average, 
+                            seasonal.periods =c(7,365.25),
+                            start=c(2005,1,1)) 
+
+load_hourly_msts <- msts(load_hourly$load, 
+                            seasonal.periods =c(24,168,8766),
+                            start=c(2005,1,1,1)) %>% #is this the right hour?
+                         na.interp()
+```
+
+## Deseason
+```{r}
+load_daily_mstl <- mstl(load_daily_msts)
+
+load_hourly_mstl <- mstl(load_hourly_msts)
+```
+
+# Forecasts
+
+## ARIMA
+
+Since this model uses complex seasonalities, the ARIMA with Fourier terms is the only ARIMA model used for this dataset.
+
+```{r echo=FALSE}
+#autofit the arima model
+daily_arima_autofit <- auto.arima(load_daily_msts,
+                                   xreg = fourier(load_daily_msts, 
+                                                  K = c(2, 5)), 
+                                   seasonal = FALSE)
+print(daily_arima_autofit)
+
+#create the arima forecast with the autofit
+forecast_daily_arima <- forecast(object = daily_arima_autofit,
+                                   xreg=fourier(load_daily_msts,
+                                                K=c(2,5),
+                                                h=59),
+                                   h=59)
+
+#plot the forecast
+plot(forecast_daily_arima)
+
+#write into csv
+write.csv(forecast_daily_arima, 
+          file = "~/Duke_R/TSA_Forecasting/Forecasts/forecast_daily_arima.csv",
+          row.names = FALSE)
+```
+
+Series: load_daily_msts 
+Regression with ARIMA(2,1,1) errors 
+
+Coefficients:
+         ar1      ar2      ma1     S1-7     C1-7     S2-7      C2-7   S1-365    C1-365    S2-365
+      0.8923  -0.2585  -0.9732  73.7011  22.0578  21.6431  -26.4128  37.7803  164.1901  648.0535
+s.e.  0.0273   0.0251   0.0231  25.4128  25.4048  10.8776   10.8791  91.5511   76.4274   57.8418
+        C2-365    S3-365    C3-365    S4-365    C4-365   S5-365    C5-365
+      774.5907  -58.3548  -24.8293  -69.0629  -53.3360   7.1060  -51.5052
+s.e.   52.0811   49.1096   46.1556   45.5895   43.8778  43.9148   42.7590
+
+sigma^2 = 254493:  log likelihood = -16729.35
+AIC=33494.7   AICc=33495.01   BIC=33597.15
+
+
+```{r echo=FALSE}
+#autofit the arima model
+hourly_arima_autofit <- auto.arima(load_hourly_msts,
+                                   xreg = fourier(load_hourly_msts, 
+                                                  K = c(2, 2, 5)), 
+                                   seasonal = FALSE)
+print(hourly_arima_autofit)
+
+#create the arima forecast with the autofit
+forecast_hourly_arima <- forecast(object = load_hourly_msts,
+                                   xreg=fourier(load_hourly_msts,
+                                                K=c(2,2,5),
+                                                h=59*24),
+                                   h=59*24)
+
+#plot the forecast
+plot(forecast_hourly_arima)
+
+#write into csv
+write.csv(forecast_hourly_arima, 
+          file = "~/Duke_R/TSA_Forecasting/Forecasts/forecast_hourly_arima.csv",
+          row.names = FALSE)
+```
+
+## ETS + STL
+
+```{r}
+forecast_daily_ets <- stlf(load_daily_msts,
+                           h=59)
+
+#plot the forecast
+plot(forecast_daily_ets)
+
+#write into csv
+write.csv(forecast_daily_ets, 
+          file = "~/Duke_R/TSA_Forecasting/Forecasts/forecast_daily_ets.csv",
+          row.names = FALSE)
+```
+
+```{r}
+forecast_hourly_ets <- stlf(load_hourly_msts,
+                           h=59*24)
+
+#plot the forecast
+plot(forecast_hourly_ets)
+
+#write into csv
+write.csv(forecast_hourly_ets, 
+          file = "~/Duke_R/TSA_Forecasting/Forecasts/forecast_hourly_ets.csv",
+          row.names = FALSE)
+```
+
+##TBATS
+
+```{r}
+#fit TBATS
+daily_tbats_fit <- tbats(load_daily_msts)
+
+#forecasting test data
+forecast_daily_tbats <- forecast(daily_tbats_fit, 
+                           h = 59)
+
+#visualization
+plot(forecast_daily_tbats)
+
+#write into csv
+write.csv(forecast_daily_tbats, 
+          file = "~/Duke_R/TSA_Forecasting/Forecasts/forecast_daily_tbats.csv",
+          row.names = FALSE)
+```
+
+```{r}
+#fit TBATS
+hourly_tbats_fit <- tbats(load_hourly_msts)
+
+#forecasting test data
+forecast_hourly_tbats <- forecast(hourly_tbats_fit, 
+                           h = 59*24)
+
+#visualization
+plot(forecast_hourly_tbats)
+
+#write into csv
+write.csv(forecast_hourly_tbats, 
+          file = "~/Duke_R/TSA_Forecasting/Forecasts/forecast_hourly_tbats.csv",
+          row.names = FALSE)
+```
