@@ -234,7 +234,6 @@ write.csv(forecast_hourly_es,
           file = "./Forecasts/forecast_hourly_es.csv",
           row.names = FALSE)
 ```
-I've been having a hard time loading this model, it's taking extremely long to compute, so I will come back to this later.
 
 ## StructTS 
 ### daily
