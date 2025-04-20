@@ -80,8 +80,8 @@ plot(forecast_daily_arima)
 
 #write into csv
 write.csv(forecast_daily_arima, 
-          file = "~/Duke_R/TSA_Forecasting/Forecasts/forecast_daily_arima.csv",
-          row.names = FALSE)
+         file = "~/Duke_R/TSA_Forecasting/Forecasts/forecast_daily_arima.csv",
+         row.names = FALSE)
 ```
 
 Series: load_daily_msts 

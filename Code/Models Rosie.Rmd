@@ -1,5 +1,5 @@
 ---
-title: "Models Rosie"
+title: "Models Alternative"
 author: "Rosie Wu"
 date: "2025-04-01"
 output: html_document
@@ -13,125 +13,176 @@ knitr::opts_chunk$set(warning = FALSE)
 knitr::opts_chunk$set(message = FALSE)
 ```
 
-```{r}
+```{r include=FALSE}
 library(here)
 library(ggplot2)
 library(forecast)
-library(tidyverse)
-```
-
-```{r}
-#create full, training, and test datasets
-dailyload <- read.csv("./Data/Processed/dailyload.csv")
-
-dailyload_train <- filter(dailyload, date <= "2009-12-31")
-
-dailyload_test <- filter(dailyload, date > "2009-12-31" & date < "2010-02-28")
-
-#create timeseries
-daily_msts <- msts(dailyload[,2],
-                   start = c(2005,01,01), 
-                   seasonal.periods =c(7,365.25))
-
-daily_train_msts <- msts(dailyload_train[,2],
-                         start = c(2005,01,01), 
-                         seasonal.periods =c(7,365.25))
-
-daily_test_msts <- msts(dailyload_test[,2],
-                        start = c(2009,12,31), 
-                        seasonal.periods =c(7,365.25))
+library(cowplot)
+library(Kendall)
+library(tseries)
+library(kableExtra)
+library(dplyr)
+library(smooth)
 ```
 
 
-## Seasonal Data
-### ARMA models, 
+# Preparation
+## Upload
+```{r include=FALSE}
+#upload test and training data
+load_daily <- read.csv("./Data/Processed/dailyload.csv")
+load_hourly <- read.csv("./Data/Processed/hourlyload.csv")
 
+#create msts
+load_daily_msts <- msts(load_daily$daily_average, 
+                            seasonal.periods =c(7,365.25),
+                            start=c(2005,1,1)) 
 
-### TBATs models
+load_hourly_msts <- msts(load_hourly$load, 
+                            seasonal.periods =c(24,168,8766),
+                            start=c(2005,1,1,1)) %>% #is this the right hour?
+                         na.interp()
+```
+
+## Deseasoned
 ```{r}
-model_tbats <- tbats(daily_train_msts)
-fc_tbats <- forecast(model_tbats)
-accuracy(fc_tbats, daily_test_msts)
+load_daily_mstl <- mstl(load_daily_msts)
 
+load_hourly_mstl <- mstl(load_hourly_msts)
 ```
 
 
+# Forecasts
 
-### ETS Models
-
-
-### Geometric Mean
-
-Create a forecast using the training data and test it on the testing data.
+## Example: TBATS Daily
 
 ```{r}
-#geometric mean on original data
-forecast_daily_mean_test <- meanf(daily_train_msts, h=59)
-plot(forecast_daily_mean_test)
-```
+#fit TBATS
+daily_tbats_fit <- tbats(load_daily_msts)
 
-Check the scores of the training model.
+#forecasting test data
+forecast_daily_tbats <- forecast(daily_tbats_fit, 
+                           h = 59)
 
-```{r}
-#residuals and scores for seasonal naive model
-residuals_daily_mean <- checkresiduals(forecast_daily_mean_test)
-score_daily_mean <- accuracy(forecast_daily_mean_test, dailyload_test[,2])
-score_daily_mean
-```
-
-Train a new model on the full dataset and then write it into a csv.
-
-```{r}
-#train seasonal naive on original data
-forecast_daily_mean <- meanf(daily_msts, h=59) 
-
-#create dataframe of forecast
-forecast_daily_mean_df <- data.frame(forecast_daily_mean) %>%
-    mutate("date" = seq(as.Date("2011/01/01"), by = "day", length.out = 59)) %>%
-    mutate("load" = round(Point.Forecast))%>%
-    select(date, load) %>%
-    `rownames<-`(NULL) 
+#visualization
+plot(forecast_daily_tbats)
 
 #write into csv
-write.csv(forecast_daily_mean_df, 
-          file = "~/Duke_R/TSA_Forecasting/Forecasts/forecast_daily_mean.csv",
-       row.names = FALSE)
-```
-
-### Seasonal Naive Model
-
-Create a forecast using the training data and test it on the testing data.
-
-```{r}
-#Seasonal naive on original data
-forecast_daily_snaive_test <- snaive(daily_train_msts, h=59)
-plot(forecast_daily_snaive_test)
-```
-
-Check the scores of the training model.
-
-```{r}
-#residuals and scores for seasonal naive model
-residuals_daily_snaive <- checkresiduals(forecast_daily_snaive_test)
-score_daily_snaive <- accuracy(forecast_daily_snaive_test, dailyload_test[,2])
-score_daily_snaive
-```
-
-Train a new model on the full dataset and then write it into a csv.
-
-```{r}
-#train seasonal naive on original data
-forecast_daily_snaive <- snaive(daily_msts, h=59) 
-
-#create dataframe of forecast
-forecast_daily_snaive_df <- data.frame(forecast_daily_snaive) %>%
-    mutate("date" = seq(as.Date("2011/01/01"), by = "day", length.out = 59)) %>%
-    mutate("load" = round(Point.Forecast))%>%
-    select(date, load) %>%
-    `rownames<-`(NULL) 
-
-#write into csv
-write.csv(forecast_daily_snaive_df, 
-          file = "./Data/Forecasts/forecast_daily_new.csv",
+write.csv(forecast_daily_tbats, 
+          file = "~/Duke_R/TSA_Forecasting/Forecasts/forecast_daily_tbats.csv",
           row.names = FALSE)
 ```
+```{r}
+#residuals and scores for seasonal naive model
+residuals_daily_tbats <- checkresiduals(forecast_daily_tbats)
+score_daily_snaive <- accuracy(forecast_daily_tbats, dailyload_test[,2])
+score_daily_snaive
+```
+## ARIMA + Fourier Tweaking
+```{r}
+#autofit the arima model
+daily_arima_fourier <- auto.arima(load_daily_msts,
+                                   xreg = fourier(load_daily_msts, 
+                                                  K = c(1, 7)), 
+                                   seasonal = FALSE)
+print(daily_arima_fourier)
+
+#create the arima forecast with the autofit
+forecast_daily_arima_fourier <- forecast(object = daily_arima_fourier,
+                                   xreg=fourier(load_daily_msts,
+                                                K=c(1,7),
+                                                h=59),
+                                   h=59)
+
+#plot the forecast
+plot(forecast_daily_arima_fourier)
+```
+```{r}
+#residuals and scores for seasonal naive model
+residuals_daily_arima_fourier <- checkresiduals(forecast_daily_arima_fourier)
+score_daily_arima_fourier <- accuracy(forecast_daily_arima_fourier, dailyload_test[,2])
+score_daily_arima_fourier
+```
+
+# Trying to debug this model still: this should help find the best Fourier terms but I'm  still using AI to debug and revise
+
+```{r}
+# Function to find optimal K for Fourier terms in ARIMA
+find_best_k <- function(ts_data, max_k = 5) {
+  # Ensure we have a valid seasonal period
+  freq <- frequency(ts_data)
+  if(is.null(freq) || freq <= 1) {
+    stop("Time series must have a seasonal period (frequency > 1)")
+  }
+  
+  best_aic <- Inf
+  best_k <- 1
+  best_model <- NULL
+  
+  for (k in 1:max_k) {
+    tryCatch({
+      fourier_terms <- cbind(
+        fourier(ts_data, K = c(k_weekly, k_yearly)), 
+        seasons = c(7, 365.25))
+
+      current_model <- auto.arima(ts_data,
+                                xreg = fourier_terms,
+                                seasonal = FALSE,
+                                stepwise = TRUE,
+                                approximation = FALSE)
+      
+      if (current_model$aic < best_aic) {
+        best_aic <- current_model$aic
+        best_k <- k
+        best_model <- current_model
+      }
+    }, error = function(e) {
+      message(paste("Error with K =", k, ":", e$message))
+    })
+  }
+  
+  if(is.null(best_model)) {
+    stop("No valid models found with the tested K values")
+  }
+  
+  return(list(model = best_model, best_k = best_k, best_aic = best_aic))
+}
+  
+
+# Usage with your data
+result <- find_best_k(load_daily_msts, max_k = 5)
+
+# The best model
+daily_arima_autofit <- result$model
+
+# The optimal K value
+optimal_k <- result$best_k
+
+# Print results
+cat("Optimal K:", optimal_k, "\n")
+cat("Best AIC:", result$best_aic, "\n")
+print(summary(daily_arima_autofit))
+```
+
+
+
+## Exponential Smoothing
+
+Let's start by trying an exponential smoothing under the state space model. In the videos we went over the state equation for level only. But the ES can be used to represent trend and seasonal as well, these are know as ETS (Exponential Trend and Seasonal) models. We will talk in more details on M10.
+
+```{r}
+daily_es_fit <- es(load_daily_msts,model="ZZZ",h=59,holdout=FALSE)
+#forecasting test data
+forecast_daily_es <- forecast(daily_es_fit, h= 58)
+
+#visualization
+plot(forecast_daily_es)
+score_forecast_daily_es <- accuracy(forecast_daily_es, dailyload_test[,2])
+score_forecast_daily_es
+```
+Extremely high MAPE and RMSE scores, so need tweaking further or change to a different model.
+
+
+## StructTS 
+
+
