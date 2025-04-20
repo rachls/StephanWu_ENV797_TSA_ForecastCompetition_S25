@@ -54,7 +54,7 @@ load_hourly_mstl <- mstl(load_hourly_msts)
 
 # Forecasts
 
-## Example: TBATS Daily
+## Previous: TBATS Daily
 
 ```{r}
 #fit TBATS
@@ -67,10 +67,6 @@ forecast_daily_tbats <- forecast(daily_tbats_fit,
 #visualization
 plot(forecast_daily_tbats)
 
-#write into csv
-write.csv(forecast_daily_tbats, 
-          file = "~/Duke_R/TSA_Forecasting/Forecasts/forecast_daily_tbats.csv",
-          row.names = FALSE)
 ```
 ```{r}
 #residuals and scores for seasonal naive model
@@ -103,15 +99,39 @@ write.csv(forecast_daily_arima_fourier,
           file = "./Forecasts/forecast_daily_arima_fourier_rosie.csv",
           row.names = FALSE)
 ```
-
-
-
 ```{r}
 #residuals and scores for seasonal naive model
 residuals_daily_arima_fourier <- checkresiduals(forecast_daily_arima_fourier)
 score_daily_arima_fourier <- accuracy(forecast_daily_arima_fourier, dailyload_test[,2])
 score_daily_arima_fourier
 ```
+
+
+```{r echo=FALSE}
+#autofit the arima model
+hourly_arima_autofit <- auto.arima(load_hourly_msts,
+                                   xreg = fourier(load_hourly_msts, 
+                                                  K = c(1, 1, 6)), 
+                                   seasonal = FALSE)
+print(hourly_arima_autofit)
+
+#create the arima forecast with the autofit
+forecast_hourly_arima <- forecast(object = load_hourly_msts,
+                                   xreg=fourier(load_hourly_msts,
+                                                K=c(1,1,6),
+                                                h=59*24),
+                                   h=59*24)
+
+#plot the forecast
+plot(forecast_hourly_arima)
+
+here()
+#write into csv
+write.csv(forecast_hourly_arima, 
+          file = "./Forecasts/forecast_hourly_arima_rosie.csv",
+          row.names = FALSE)
+```
+
 
 # Trying to debug this model still: this should help find the best Fourier terms but I'm  still using AI to debug and revise
 
@@ -177,7 +197,7 @@ print(summary(daily_arima_autofit))
 
 ## Exponential Smoothing
 
-Let's start by trying an exponential smoothing under the state space model. In the videos we went over the state equation for level only. But the ES can be used to represent trend and seasonal as well, these are know as ETS (Exponential Trend and Seasonal) models. We will talk in more details on M10.
+### Daily ES
 
 ```{r}
 daily_es_fit <- es(load_daily_msts,model="ZZZ",h=59,holdout=FALSE)
@@ -188,10 +208,62 @@ forecast_daily_es <- forecast(daily_es_fit, h= 58)
 plot(forecast_daily_es)
 score_forecast_daily_es <- accuracy(forecast_daily_es, dailyload_test[,2])
 score_forecast_daily_es
+
+here()
+#write into csv
+write.csv(forecast_daily_es, 
+          file = "./Forecasts/forecast_daily_es.csv",
+          row.names = FALSE)
 ```
 Extremely high MAPE and RMSE scores, so need tweaking further or change to a different model.
 
+### Hourly ES
+```{r}
+hourly_es_fit <- es(load_hourly_msts,model="ZZZ", h=59*24,holdout=FALSE)
+#forecasting test data
+forecast_hourly_es <- forecast(hourly_es_fit, h=59*24-1)
+
+#visualization
+plot(forecast_hourly_es)
+score_forecast_hourly_es <- accuracy(forecast_hourly_es, dailyload_test[,2])
+score_forecast_hourly_es
+
+here()
+#write into csv
+write.csv(forecast_hourly_es, 
+          file = "./Forecasts/forecast_hourly_es.csv",
+          row.names = FALSE)
+```
+I've been having a hard time loading this model, it's taking extremely long to compute, so I will come back to this later.
 
 ## StructTS 
+### daily
+```{r}
+daily_ss_fit <- StructTS(load_daily_msts,
+                    type="BSM",fixed=c(NA,NA,NA,NA))   #this function has convergence issues
+checkresiduals(daily_ss_fit)
+```
 
+```{r}
+daily_ss_fit <- StructTS(load_daily_msts,
+                    type="BSM",fixed=c(0.1,0.01,0.3,NA)) 
+
+#this function has convergence issues
+checkresiduals(daily_ss_fit)
+
+#Generating forecasts
+# StructTS() does not call the forecast() internally so we need one more step
+forecast_daily_ss <- forecast(daily_ss_fit,h=59)
+plot(forecast_daily_ss)
+
+
+score_forecast_daily_es <- accuracy(forecast_daily_ss, dailyload_test[,2])
+score_forecast_daily_es
+
+here()
+#write into csv
+write.csv(forecast_hourly_es, 
+          file = "./Forecasts/forecast_daily_ss.csv",
+          row.names = FALSE)
+```
 
