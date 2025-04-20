@@ -96,7 +96,16 @@ forecast_daily_arima_fourier <- forecast(object = daily_arima_fourier,
 
 #plot the forecast
 plot(forecast_daily_arima_fourier)
+
+here()
+#write into csv
+write.csv(forecast_daily_arima_fourier, 
+          file = "./Forecasts/forecast_daily_arima_fourier_rosie.csv",
+          row.names = FALSE)
 ```
+
+
+
 ```{r}
 #residuals and scores for seasonal naive model
 residuals_daily_arima_fourier <- checkresiduals(forecast_daily_arima_fourier)
