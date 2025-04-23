@@ -3,6 +3,17 @@ output: html_document
 editor_options: 
   chunk_output_type: console
 ---
+```{r include=FALSE}
+library(here)
+library(ggplot2)
+library(forecast)
+library(cowplot)
+library(Kendall)
+library(tseries)
+library(kableExtra)
+library(dplyr)
+library(smooth)
+```
 
 # Upload Previous Models
 ```{r}
