@@ -56,10 +56,25 @@ hourlyload <- readxl::read_xlsx("./Data/Raw/load.xlsx") %>%
     select(-meter_id)
 ```
 
+## Section Data
+
+```{r}
+dailyload_train <- head(dailyload,
+                        (length(dailyload$daily_average)-50))
+
+dailyload_test <- tail(dailyload, 50)
+```
+
 # Save Processed Data
 
 ```{r}
 write.csv(dailyload, file = "~/Duke_R/TSA_Forecasting/Data/Processed/dailyload.csv",
+          row.names = FALSE)
+
+write.csv(dailyload_train, file = "~/Duke_R/TSA_Forecasting/Data/Processed/dailyload_train.csv",
+          row.names = FALSE)
+
+write.csv(dailyload_test, file = "~/Duke_R/TSA_Forecasting/Data/Processed/dailyload_test.csv",
           row.names = FALSE)
 
 write.csv(hourlyload, file = "~/Duke_R/TSA_Forecasting/Data/Processed/hourlyload.csv",

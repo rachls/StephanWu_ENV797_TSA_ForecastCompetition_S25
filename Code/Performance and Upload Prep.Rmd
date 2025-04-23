@@ -1,0 +1,118 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Upload Previous Models
+```{r}
+#upload files
+filenames <- list.files("./Forecasts/Training", full.names = TRUE)
+
+# Extract base names without extensions (to use as object names)
+object_names <- tools::file_path_sans_ext(basename(filenames))
+
+# Read the CSVs into a named list
+forecasts <- setNames(lapply(filenames, read_csv), object_names)
+
+#Create objects in global environment.
+list2env(forecasts, .GlobalEnv)
+
+rm(filenames)
+
+#upload test data
+load_daily_test <- read.csv("./Data/Processed/dailyload_test.csv")
+```
+
+# Clean Data Sets
+
+```{r}
+dates <- seq(as.Date("2011/1/1"), by = "day", length.out = 50)
+
+hours <- rep(c(1:24),50)
+
+for (i in seq_along(forecasts)) {
+  if (length(forecasts[[i]][[1]]) == 50) {
+    
+    #create data frame of daily data
+    forecasts[[i]] <- data.frame("date" = dates,
+                         "load" = forecasts[[i]][[1]])
+  } else if (length(forecasts[[i]][[1]]) == 1416) {
+    
+    #aggregate into daily data
+    daily <- forecasts[[i]] %>%
+      mutate(date = rep(dates, each = 24)) %>%
+      select(date, 1) %>%
+      rename(load = 2) %>%
+      group_by(date) %>%
+      summarize(load = mean(load)) %>%
+      ungroup()
+    
+    forecasts[[i]] <- daily
+    
+  } else {
+    cat("Manually Edit: ", object_names[i], "\n")
+  }
+}
+
+#DON'T KNOW HOW TO DEAL WITH NN RIGHT NOW. WILL CHECK LATER. FOR NOW:
+forecasts <- forecasts[!sapply(forecasts, function(x) isTRUE(all.equal(x, daily_nn)))]
+
+#go from list to df of means
+forecasts_df <- as.data.frame(
+  setNames(
+    lapply(forecasts, function(x) x$load),
+    names(forecasts)
+  )
+)
+```
+
+# Averaging
+Averaging every combination of the models will result in 
+
+```{r}
+# Get column names
+col_names <- names(forecasts_df)
+
+# Initialize empty list to hold averaged columns
+avg_forecasts <- list()
+
+# Loop over sizes of combinations (from 2 to 9 models)
+for (r in 2:length(col_names)) {
+  combos <- combn(col_names, r, simplify = FALSE)
+  
+  for (combo in combos) {
+    combo_name <- paste(combo, collapse = "_")
+    avg_forecasts[[combo_name]] <- rowMeans(forecasts_df[, combo, drop = FALSE])
+  }
+}
+
+# Convert to a data frame
+avg_forecasts_df <- cbind(forecasts_df, as.data.frame(avg_forecasts))
+```
+
+Get the performance of each combination and save the top 10 to a separate dataframe
+
+```{r}
+avg_forecasts_accuracy <- data.frame(matrix(ncol = 5, nrow = 0))
+
+#provide column names
+colnames(avg_forecasts_accuracy) <- c('ME', 'RSME', 'MAE', "MPE", "MAPE")
+
+#calculate accuracy statistics
+for (i in 1:length(avg_forecasts_df)) {
+  avg_forecasts_accuracy[i,] <- accuracy(avg_forecasts_df[,i], load_daily_test$daily_average)
+}
+
+#set row names
+row.names(avg_forecasts_accuracy) <- colnames(avg_forecasts_df)
+```
+
+# Extracting Best Forecasts
+
+```{r}
+#get best averaged forecasts
+avg_forecasts_accuracy_best <- rbind(avg_forecasts_accuracy) %>%
+  arrange(abs(MAPE)) %>%
+  head(5) #get 5 best forecasts
+```

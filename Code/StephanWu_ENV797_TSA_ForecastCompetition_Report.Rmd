@@ -1,0 +1,103 @@
+---
+title: "Forecasting Competition Report"
+author: Rachael Stephan & Rosie Wu
+output:
+  pdf_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+[Github Repository](https://github.com/rachls/StephanWu_ENV797_TSA_ForecastCompetition_S25)
+
+# Introduction
+
+This report contains the final deliverable for the forecasting competition for ENV 797. The objective of this competition was to produce the best time series forecast of a daily load using various models and exogenous factors of humidity and temperature. This report contains the workings for the 5 top performing models.
+
+# Data Source
+
+Data was retrieved from the [Kaggle competition site](https://www.kaggle.com/competitions/tsa-spring-2025/data). All data was provided by instructor Luana Lima. 
+
+# Wrangling
+
+The hourly load data frame were uploaded into R and wrangled as follows to produced both daily and hourly data.
+
+Daily Data:
+
+-   Format date columns as date.
+-   Aggregate data frame by row with `rowwise()`
+-   Calculate the daily load as the mean of every hour.
+-   Ungroup the data frame from `rowwise()`
+-   Drop unnecessary columns (i.e., hourly data and meter id)
+
+```{r, eval=FALSE}
+#load data and create a daily average data frame
+dailyload <- readxl::read_xlsx("./Data/Raw/load.xlsx") %>%
+    mutate(date = as.Date(date, format = "%Y-%m-%d")) %>%  
+    rowwise() %>%
+    mutate(daily_average = mean(c_across(h1:h24), na.rm = TRUE)) %>%  
+    ungroup() %>%
+    select(-c(h1:h24), -meter_id)
+```
+
+Hourly Data:
+
+-   Format date columns as date.
+-   Calculate the daily load as the mean of every hour.
+-   pivot data frame longer to put the hour into one column and the hourly load into another.
+-   Extract hour integer and reformat hour column as integer data.
+-   Drop unnecessary columns (i.e., meter id)
+
+```{r, eval=FALSE}
+#load data and create an hourly average data frame
+hourlyload <- readxl::read_xlsx("./Data/Raw/load.xlsx") %>%
+    mutate(date = as.Date(date, format = "%Y-%m-%d")) %>%  
+    pivot_longer(cols = starts_with("h"),
+                 names_to = "hour",
+                 values_to = "load")%>%
+    mutate(hour = as.integer(substring(hour,2))) %>%
+    select(-meter_id)
+```
+
+## Section Data
+
+Data was wrangled into training (n = 2141) and test (n = 50) observations. These were used to evaluate our models before uploading to Kaggle.
+
+```{r, eval=FALSE}
+dailyload_train <- head(dailyload,
+                        (length(dailyload$daily_average)-50))
+
+dailyload_test <- tail(dailyload, 50)
+```
+
+```{r include=FALSE}
+#UPLOAD FORECASTS WE USED FROM OUR TRAINING MODULES
+```
+# Forecasting Methods
+
+The top 5 models were as follows:
+
+1.    model 1
+2.    model 2
+3.    model 3
+4.    model 4
+5.    model 5
+
+Some models were run on the hourly data, which were averaged into daily loads after forecasting. However, these models had a very long processing time. Therefore, we were unable to use these models to forecast for both the full and training data sets. We ran these models only on the full data set if our computers were able to process them. Thus, they are not included in our top 5 models in this report but they are uploaded onto Kaggle. 
+
+## Model 1
+
+## Model 2
+
+## Model 3
+
+## Model 4
+
+## Model 5
+
+# Performance Evaluation
+
+include a graph of all 5 forecasts and the performance evaluation table.
+
+# Conclusions
+
+A short paragraph about which were the best models, how well they aligned with 

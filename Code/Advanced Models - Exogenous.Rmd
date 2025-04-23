@@ -1,0 +1,14 @@
+---
+title: "Advanced Load Forecasting wit Exogenous Variables"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+```{r}
+
+```
+
