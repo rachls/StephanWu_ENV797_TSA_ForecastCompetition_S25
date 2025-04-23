@@ -30,7 +30,9 @@ library(smooth)
 ```
 
 # Preparation
+
 ## Upload
+
 ```{r include=FALSE}
 #upload test and training data
 load_daily <- read.csv("./Data/Processed/dailyload.csv")
@@ -63,7 +65,6 @@ load_daily_test_msts <- msts(load_daily_test,
 Acf(load_daily_msts, lag = 20)
 Pacf(load_daily_msts, lag = 20)
 ```
-
 
 # Forecasts
 
@@ -120,19 +121,11 @@ write.csv(forecast_daily_arima,
          row.names = FALSE)
 ```
 
-Series: load_daily_msts 
-Regression with ARIMA(2,1,1) errors 
+Series: load_daily_msts Regression with ARIMA(2,1,1) errors
 
-Coefficients:
-         ar1      ar2      ma1     S1-7     C1-7     S2-7      C2-7   S1-365    C1-365    S2-365
-      0.8923  -0.2585  -0.9732  73.7011  22.0578  21.6431  -26.4128  37.7803  164.1901  648.0535
-s.e.  0.0273   0.0251   0.0231  25.4128  25.4048  10.8776   10.8791  91.5511   76.4274   57.8418
-        C2-365    S3-365    C3-365    S4-365    C4-365   S5-365    C5-365
-      774.5907  -58.3548  -24.8293  -69.0629  -53.3360   7.1060  -51.5052
-s.e.   52.0811   49.1096   46.1556   45.5895   43.8778  43.9148   42.7590
+Coefficients: ar1 ar2 ma1 S1-7 C1-7 S2-7 C2-7 S1-365 C1-365 S2-365 0.8923 -0.2585 -0.9732 73.7011 22.0578 21.6431 -26.4128 37.7803 164.1901 648.0535 s.e. 0.0273 0.0251 0.0231 25.4128 25.4048 10.8776 10.8791 91.5511 76.4274 57.8418 C2-365 S3-365 C3-365 S4-365 C4-365 S5-365 C5-365 774.5907 -58.3548 -24.8293 -69.0629 -53.3360 7.1060 -51.5052 s.e. 52.0811 49.1096 46.1556 45.5895 43.8778 43.9148 42.7590
 
-sigma^2 = 254493:  log likelihood = -16729.35
-AIC=33494.7   AICc=33495.01   BIC=33597.15
+sigma\^2 = 254493: log likelihood = -16729.35 AIC=33494.7 AICc=33495.01 BIC=33597.15
 
 ### Hourly Code
 
@@ -161,7 +154,9 @@ write.csv(forecast_hourly_arima,
 ```
 
 ## ETS + STL
+
 ### Training Data Set
+
 ```{r}
 #create forecast
 forecast_daily_ets_train <- stlf(load_daily_train_msts,
@@ -174,6 +169,7 @@ write.csv(forecast_daily_ets_train,
 ```
 
 ### Full Data Set
+
 ```{r}
 forecast_daily_ets <- stlf(load_daily_msts,
                            h=59)
@@ -188,6 +184,7 @@ write.csv(forecast_daily_ets,
 ```
 
 ### Hourly
+
 ```{r}
 forecast_hourly_ets <- stlf(load_hourly_msts,
                            h=59*24)
@@ -201,8 +198,8 @@ write.csv(forecast_hourly_ets,
           row.names = FALSE)
 ```
 
-##TBATS
-### Training Data Set
+##TBATS \### Training Data Set
+
 ```{r}
 #create fit
 daily_tbats_fit_train <- tbats(load_daily_train_msts)
@@ -217,6 +214,7 @@ write.csv(forecast_daily_tbats,
 ```
 
 ### Full Data Set
+
 ```{r}
 daily_tbats_fit <- tbats(load_daily_msts)
 
@@ -234,6 +232,7 @@ write.csv(forecast_daily_tbats,
 ```
 
 ### Hourly Data Set
+
 ```{r, eval=FALSE}
 #fit TBATS
 hourly_tbats_fit <- tbats(load_hourly_msts)
@@ -254,6 +253,7 @@ write.csv(forecast_hourly_tbats,
 ## Neural Network
 
 Let NN model pick the p and P values automatically by omitting them. Find best K values as below:
+
 ```{r, eval=FALSE}
 # Set max K values to test
 max_K1 <- 3  # For weekly seasonality
@@ -279,13 +279,10 @@ cat("Best K values: K1 =", best_row$K1, ", K2 =", best_row$K2, "\n")
 ### Training Data Set
 
 ```{r}
-fit_nn_daily_train <- nnetar(load_daily_train_msts,
-                      xreg = fourier(load_daily_train_msts, K = c(2, 5)))
+fit_nn_daily_train <- nnetar(as.numeric(load_daily_train_msts))
 
 forecast_daily_nn_train <- forecast(fit_nn_daily_train, 
-                   h=50,
-                   xreg= fourier(load_daily_train_msts, 
-                                 K = c(2, 5)))
+                   h=50)
 
 #write into csv
 write.csv(forecast_daily_nn_train, 
@@ -296,13 +293,10 @@ write.csv(forecast_daily_nn_train,
 ### Full Data Set
 
 ```{r}
-fit_nn_daily <- nnetar(load_daily_msts,
-                      xreg = fourier(load_daily_msts, K = c(2, 5)))
+fit_nn_daily <- nnetar(as.numeric(load_daily_msts))
 
 forecast_daily_nn <- forecast(fit_nn_daily, 
-                   h=59,
-                   xreg= fourier(load_daily_msts, 
-                                 K = c(2, 5)))
+                   h=59)
 
 #write into csv
 write.csv(forecast_daily_nn, 
@@ -328,6 +322,7 @@ write.csv(forecast_daily_nn,
 ```
 
 ## State Space - ES
+
 ### Training Data Set
 
 ```{r}
@@ -345,7 +340,6 @@ write.csv(forecast_daily_SSES_train,
           file = "~/Duke_R/TSA_Forecasting/Forecasts/Training/daily_sses.csv",
           row.names = FALSE)
 ```
-
 
 ### Full Data Set
 
@@ -365,8 +359,8 @@ write.csv(forecast_daily_SSES,
           row.names = FALSE)
 ```
 
-
 ### Hourly Data Set
+
 ```{r, eval=FALSE}
 fit_SSES_hourly <- es(load_hourly_msts,
                       model="ZZZ",
@@ -385,4 +379,4 @@ write.csv(forecast_hourly_SSES,
 
 ## State Space - BSM
 
-This model cannot handle multiple seasonalities and was excluded from our analysis. 
+This model cannot handle multiple seasonalities and was excluded from our analysis.

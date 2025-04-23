@@ -13,6 +13,7 @@ library(tseries)
 library(kableExtra)
 library(dplyr)
 library(smooth)
+library(tidyverse)
 ```
 
 # Upload Previous Models
@@ -65,9 +66,6 @@ for (i in seq_along(forecasts)) {
     cat("Manually Edit: ", object_names[i], "\n")
   }
 }
-
-#DON'T KNOW HOW TO DEAL WITH NN RIGHT NOW. WILL CHECK LATER. FOR NOW:
-forecasts <- forecasts[!sapply(forecasts, function(x) isTRUE(all.equal(x, daily_nn)))]
 
 #go from list to df of means
 forecasts_df <- as.data.frame(
