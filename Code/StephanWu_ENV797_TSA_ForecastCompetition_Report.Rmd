@@ -76,7 +76,7 @@ dailyload_test <- tail(dailyload, 50)
 
 The top 5 models were as follows:
 
-1.    model 1
+1.    Neural Network Model (Daily dataset, k= 1, 1, 3)
 2.    model 2
 3.    model 3
 4.    model 4
@@ -85,6 +85,52 @@ The top 5 models were as follows:
 Some models were run on the hourly data, which were averaged into daily loads after forecasting. However, these models had a very long processing time. Therefore, we were unable to use these models to forecast for both the full and training data sets. We ran these models only on the full data set if our computers were able to process them. Thus, they are not included in our top 5 models in this report but they are uploaded onto Kaggle. 
 
 ## Model 1
+```{r, eval=FALSE}
+# Set max K values to test
+max_K1 <- 3  # For weekly seasonality
+max_K2 <- 5  # For yearly seasonality
+
+results <- expand.grid(K1 = 1:max_K1, K2 = 1:max_K2)
+results$AICc <- NA
+
+# Loop over all K1-K2 combinations
+for (i in 1:nrow(results)) {
+  Kvals <- c(results$K1[i], results$K2[i])
+  xreg <- fourier(load_daily_msts, K = Kvals)
+  
+  fit <- auto.arima(load_daily_msts, xreg = xreg, seasonal = FALSE)
+  results$AICc[i] <- fit$aicc
+}
+
+# Find best K1-K2 pair
+best_row <- results[which.min(results$AICc), ]
+cat("Best K values: K1 =", best_row$K1, ", K2 =", best_row$K2, "\n")
+
+# Training Data Set
+fit_nn_daily_train <- nnetar(as.numeric(load_daily_train_msts))
+
+forecast_daily_nn_train <- forecast(fit_nn_daily_train, 
+                   h=59)
+
+here()
+getwd()
+
+#write into csv
+write.csv(forecast_daily_nn_train, 
+          file = "../Forecasts/Training/nn2.csv",
+          row.names = FALSE)
+
+fit_nn_daily <- nnetar(as.numeric(load_daily_msts))
+
+forecast_daily_nn <- forecast(fit_nn_daily, 
+                   h=59)
+plot(forecast_daily_nn)
+
+
+write.csv(forecast_daily_nn, 
+          file = "../Forecasts/Raw/forecast_daily_nn2.csv",
+          row.names = FALSE)
+```
 
 ## Model 2
 
@@ -95,6 +141,12 @@ Some models were run on the hourly data, which were averaged into daily loads af
 ## Model 5
 
 # Performance Evaluation
+
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir = normalizePath("..")) # or your project root
+getwd()
+knitr::include_graphics("./Forecasts/NN_daily_113.png")
+```
 
 include a graph of all 5 forecasts and the performance evaluation table.
 
