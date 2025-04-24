@@ -42,7 +42,7 @@ load_daily_msts <- msts(load_daily$daily_average,
                             start=c(2005,1,1)) 
 
 load_hourly_msts <- msts(load_hourly$load, 
-                            seasonal.periods =c(24,168,8766),
+                            seasonal.periods =c(24,168,8760),
                             start=c(2005,1,1,1)) %>% #is this the right hour?
                          na.interp()
 load_daily_train_msts <- msts(load_daily_train,
@@ -246,32 +246,115 @@ write.csv(forecast_hourly_es,
 ```
 
 ## StructTS 
-### daily
+### hourly
 ```{r}
-daily_ss_fit <- StructTS(load_daily_msts,
+hourly_ss_fit <- StructTS(load_hourly_msts,
                     type="BSM",fixed=c(NA,NA,NA,NA))   #this function has convergence issues
 checkresiduals(daily_ss_fit)
 ```
 
 ```{r}
-daily_ss_fit <- StructTS(load_daily_msts,
+hourly_ss_fit <- StructTS(load_hourly_msts,
                     type="BSM",fixed=c(0.1,0.01,0.3,NA)) 
 
 #this function has convergence issues
-checkresiduals(daily_ss_fit)
+checkresiduals(hourly_ss_fit)
 
 #Generating forecasts
 # StructTS() does not call the forecast() internally so we need one more step
-forecast_daily_ss <- forecast(daily_ss_fit,h=59)
-plot(forecast_daily_ss)
+forecast_hourly_ss <- forecast(hourly_ss_fit,h=59)
+plot(forecast_hourly_ss)
 
 
-score_forecast_daily_es <- accuracy(forecast_daily_ss, dailyload_test[,2])
-score_forecast_daily_es
+score_forecast_hourly_es <- accuracy(forecast_hourly_ss, dailyload_test[,2])
+score_forecast_hourly_es
 
 here()
 #write into csv
-write.csv(forecast_hourly_es, 
+write.csv(forecast_hourly_ss, 
           file = "./Forecasts/forecast_daily_ss.csv",
+          row.names = FALSE)
+```
+
+
+## Neural Networks (current top performing model):
+
+```{r, eval=FALSE}
+# Set max K values to test
+max_K1 <- 3  # For weekly seasonality
+max_K2 <- 5  # For yearly seasonality
+
+results <- expand.grid(K1 = 1:max_K1, K2 = 1:max_K2)
+results$AICc <- NA
+
+# Loop over all K1-K2 combinations
+for (i in 1:nrow(results)) {
+  Kvals <- c(results$K1[i], results$K2[i])
+  xreg <- fourier(load_daily_msts, K = Kvals)
+  
+  fit <- auto.arima(load_daily_msts, xreg = xreg, seasonal = FALSE)
+  results$AICc[i] <- fit$aicc
+}
+
+# Find best K1-K2 pair
+best_row <- results[which.min(results$AICc), ]
+cat("Best K values: K1 =", best_row$K1, ", K2 =", best_row$K2, "\n")
+```
+
+
+### Training Data Set
+
+```{r}
+fit_nn_daily_train <- nnetar(as.numeric(load_daily_train_msts))
+
+forecast_daily_nn_train <- forecast(fit_nn_daily_train, 
+                   h=59)
+
+here()
+getwd()
+
+#write into csv
+write.csv(forecast_daily_nn_train, 
+          file = "../Forecasts/Training/nn2.csv",
+          row.names = FALSE)
+```
+
+### Full Data Set
+
+```{r}
+fit_nn_daily <- nnetar(as.numeric(load_daily_msts))
+
+forecast_daily_nn <- forecast(fit_nn_daily, 
+                   h=59)
+plot(forecast_daily_nn)
+
+#write into csv
+write.csv(forecast_daily_nn, 
+          file = "../Forecasts/Raw/forecast_daily_nn2.csv",
+          row.names = FALSE)
+```
+
+### Hourly Data Set
+
+```{r, eval=FALSE}
+
+
+hourly_nn_autofit <- nnetar(load_hourly_msts,
+                           xreg = fourier(load_hourly_msts, K = c(1, 1, 3)), 
+                           seasonal = FALSE,
+                           size = 5)
+print(hourly_arima_autofit)
+
+#create the arima forecast with the autofit
+forecast_hourly_nn <- forecast(object = hourly_nn_autofit,
+                                   xreg=fourier(load_hourly_msts,
+                                                K=c(1,1,3),
+                                                h=59*24),
+                                   h=59*24)
+plot(forecast_hourly_nn)
+
+#write into csv
+write.csv(forecast_hourly_nn, 
+          file = "../Forecasts/Raw/forecast_hourly_nn2.csv",
           row.names = FALSE)
 ```
