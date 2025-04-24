@@ -125,3 +125,17 @@ avg_forecasts_accuracy_best <- rbind(avg_forecasts_accuracy) %>%
   arrange(abs(MAPE)) %>%
   head(5) #get 5 best forecasts
 ```
+
+# Save formatted dataframes
+```{r}
+for (i in seq_along(object_names)) {
+  filepath <- paste0("Forecasts/Cleaned/", object_names[i], ".csv")
+  
+  df <- get(object_names[i])
+  
+  write.csv(df, 
+          file = here(filepath),
+          row.names = FALSE)
+}
+```
+
