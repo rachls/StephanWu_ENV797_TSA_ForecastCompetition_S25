@@ -30,8 +30,11 @@ library(smooth)
 ## Upload
 ```{r include=FALSE}
 #upload test and training data
-load_daily <- read.csv("./Data/Processed/dailyload.csv")
-load_hourly <- read.csv("./Data/Processed/hourlyload.csv")
+getwd()
+load_daily <- read.csv("../Data/Processed/dailyload.csv")
+load_hourly <- read.csv("../Data/Processed/hourlyload.csv")
+load_daily_train <- read.csv("../Data/Processed/dailyload_train.csv")
+load_daily_test <- read.csv("../Data/Processed/dailyload_test.csv")
 
 #create msts
 load_daily_msts <- msts(load_daily$daily_average, 
@@ -42,6 +45,13 @@ load_hourly_msts <- msts(load_hourly$load,
                             seasonal.periods =c(24,168,8766),
                             start=c(2005,1,1,1)) %>% #is this the right hour?
                          na.interp()
+load_daily_train_msts <- msts(load_daily_train,
+                              seasonal.periods =c(7,365.25),
+                              start=c(2005,1,1))
+
+load_daily_test_msts <- msts(load_daily_test,
+                             seasonal.periods =c(7,365.25),
+                             start=c(2005,1,1))
 ```
 
 ## Deseasoned
@@ -265,4 +275,3 @@ write.csv(forecast_hourly_es,
           file = "./Forecasts/forecast_daily_ss.csv",
           row.names = FALSE)
 ```
-
