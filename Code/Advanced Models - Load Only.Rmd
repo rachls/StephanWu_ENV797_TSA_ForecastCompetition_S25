@@ -91,7 +91,7 @@ forecast_daily_arima_train <- forecast(object = daily_arima_train,
 
 #write into csv
 write.csv(forecast_daily_arima_train, 
-         file = "~/Duke_R/TSA_Forecasting/Forecasts/Training/daily_arima.csv",
+         file = "~/Duke_R/TSA_Forecasting/Forecasts/Training/arima.csv",
          row.names = FALSE)
 ```
 
@@ -164,7 +164,7 @@ forecast_daily_ets_train <- stlf(load_daily_train_msts,
 
 #write into csv
 write.csv(forecast_daily_ets_train, 
-         file = "~/Duke_R/TSA_Forecasting/Forecasts/Training/daily_ets.csv",
+         file = "~/Duke_R/TSA_Forecasting/Forecasts/Training/ets.csv",
          row.names = FALSE)
 ```
 
@@ -198,7 +198,8 @@ write.csv(forecast_hourly_ets,
           row.names = FALSE)
 ```
 
-##TBATS \### Training Data Set
+##TBATS 
+### Training Data Set
 
 ```{r}
 #create fit
@@ -209,7 +210,7 @@ forecast_daily_tbats <- forecast(daily_tbats_fit_train,
                            h = 50)
 #write into csv
 write.csv(forecast_daily_tbats, 
-         file = "~/Duke_R/TSA_Forecasting/Forecasts/Training/daily_tbats.csv",
+         file = "~/Duke_R/TSA_Forecasting/Forecasts/Training/tbats.csv",
          row.names = FALSE)
 ```
 
@@ -286,7 +287,7 @@ forecast_daily_nn_train <- forecast(fit_nn_daily_train,
 
 #write into csv
 write.csv(forecast_daily_nn_train, 
-          file = "~/Duke_R/TSA_Forecasting/Forecasts/Training/daily_nn.csv",
+          file = "~/Duke_R/TSA_Forecasting/Forecasts/Training/nn.csv",
           row.names = FALSE)
 ```
 
@@ -337,7 +338,7 @@ forecast_daily_SSES_train <-forecast(fit_SSES_daily_train,
 
 #write into csv
 write.csv(forecast_daily_SSES_train, 
-          file = "~/Duke_R/TSA_Forecasting/Forecasts/Training/daily_sses.csv",
+          file = "~/Duke_R/TSA_Forecasting/Forecasts/Training/sses.csv",
           row.names = FALSE)
 ```
 

@@ -130,7 +130,7 @@ avg_forecasts_accuracy_best <- rbind(avg_forecasts_accuracy) %>%
 ```{r}
 #export stand alone forecasts
 for (i in seq_along(object_names)) {
-  filepath <- paste0("Forecasts/Cleaned/", object_names[i], ".csv")
+  filepath <- paste0("Forecasts/Cleaned_Training/", object_names[i], ".csv")
   
   df <- get(object_names[i])
   
@@ -147,7 +147,7 @@ list2env(avg_forecasts, .GlobalEnv)
 
 #export averaged forecasts
 for (i in seq_along(avg_names)) {
-  filepath <- paste0("Forecasts/Cleaned/", avg_names[i], ".csv")
+  filepath <- paste0("Forecasts/Cleaned_Training/", avg_names[i], ".csv")
   
   df <- get(avg_names[i])
   
