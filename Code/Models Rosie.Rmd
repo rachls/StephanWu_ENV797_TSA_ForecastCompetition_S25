@@ -355,6 +355,6 @@ plot(forecast_hourly_nn)
 
 #write into csv
 write.csv(forecast_hourly_nn, 
-          file = "../Forecasts/Raw/forecast_hourly_nn2.csv",
+          file = "./Forecasts/Raw/forecast_hourly_nn2.csv",
           row.names = FALSE)
 ```
