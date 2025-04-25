@@ -9,6 +9,21 @@ editor_options:
 
 [Github Repository](https://github.com/rachls/StephanWu_ENV797_TSA_ForecastCompetition_S25)
 
+```{r include=FALSE}
+library(here)
+library(ggplot2)
+library(forecast)
+library(cowplot)
+library(Kendall)
+library(tseries)
+library(kableExtra)
+library(dplyr)
+library(smooth)
+library(tidyverse)
+library(tibble)
+library(knitr)
+```
+
 # Introduction
 
 This report contains the final deliverable for the forecasting competition for ENV 797. The objective of this competition was to produce the best time series forecast of a daily load using various models and exogenous factors of humidity and temperature. This report contains the workings for the 5 top performing models.
@@ -69,50 +84,33 @@ dailyload_train <- head(dailyload,
 dailyload_test <- tail(dailyload, 50)
 ```
 
-```{r include=FALSE}
-#UPLOAD FORECASTS WE USED FROM OUR TRAINING MODULES
+## Time Series Objects
+
+The timeseries objects were created with a weekly and yearly seasonality in the `msts`. The `ts` object was created with a frequency of a year. Representative code of this process is shown below with the daily load data frame. 
+
+```{r eval=FALSE}
+#create time series objects
+load_daily_msts <- msts(dailyload$daily_average, 
+                            seasonal.periods =c(7,365.25),
+                            start=c(2005,1,1)) 
+
+load_daily_ts <- ts(dailyload$daily_average,
+                        frequency = 365.25,
+                        start=c(2005,1,1))
 ```
 
 # Forecasting Methods
 
-The top 5 models were as follows:
+To evaluate our own code before uploading onto kaggle, we designated a test period as the last 50 observations in the load data set and the training period as all observations but the last 50. These test forecasts were evaluated based on their MAPE. 
 
-1.    Neural Network Model (Daily dataset, k= 1, 1, 3)
-2.    model 2
-3.    model 3
-4.    model 4
-5.    model 5
+We ran multiple types of models, including arima, sarima, neural network, tbats, state space, and ETS. Some models were run on the hourly data, which were averaged into daily loads after forecasting. However, these models had a very long processing time. Therefore, we were unable to use these models to forecast for both the full and training data sets. We ran these models only on the full data set if our computers were able to process them. Thus, they are not included in our top 5 models in this report but they are uploaded onto Kaggle. 
 
-Some models were run on the hourly data, which were averaged into daily loads after forecasting. However, these models had a very long processing time. Therefore, we were unable to use these models to forecast for both the full and training data sets. We ran these models only on the full data set if our computers were able to process them. Thus, they are not included in our top 5 models in this report but they are uploaded onto Kaggle. 
+Some models with the exogenous variable of temperature were performed. When making predictions, the forecasts were made with the tail of temperature values.
 
-```{r eval=FALSE}
-#upload test and training data
-load_daily <- read.csv("./Data/Processed/dailyload.csv")
-load_hourly <- read.csv("./Data/Processed/hourlyload.csv")
-load_daily_train <- read.csv("./Data/Processed/dailyload_train.csv")
-load_daily_test <- read.csv("./Data/Processed/dailyload_test.csv")
+The code for some of the best performing models for the full data set are included below, in no particular order.
 
-#create msts
-load_daily_msts <- msts(load_daily$daily_average, 
-                            seasonal.periods =c(7,365.25),
-                            start=c(2005,1,1)) 
+## Neural Network Model
 
-load_hourly_msts <- msts(load_hourly$load, 
-                            seasonal.periods =c(24,168,8766),
-                            start=c(2005,1,1,1)) %>% #is this the right hour?
-                         na.interp()
-
-load_daily_train_msts <- msts(load_daily_train,
-                              seasonal.periods =c(7,365.25),
-                              start=c(2005,1,1))
-
-load_daily_test_msts <- msts(load_daily_test,
-                             seasonal.periods =c(7,365.25),
-                             start=c(2005,1,1))
-```
-
-
-## Model 1
 ```{r, eval=FALSE}
 # Set max K values to test
 max_K1 <- 3  # For weekly seasonality
@@ -149,64 +147,114 @@ fit_nn_daily <- nnetar(as.numeric(load_daily_msts))
 
 forecast_daily_nn <- forecast(fit_nn_daily, 
                    h=59)
-plot(forecast_daily_nn)
-
-
-write.csv(forecast_daily_nn, 
-          file = "../Forecasts/Raw/forecast_daily_nn2.csv",
-          row.names = FALSE)
 ```
 
-## Model 2
+## TBATS
+
 ```{r, eval=FALSE}
 daily_tbats_fit <- tbats(load_daily_msts)
 
 #forecasting test data
 forecast_daily_tbats <- forecast(daily_tbats_fit, 
                            h = 59)
-#visualization
-plot(forecast_daily_tbats)
-
-write.csv(forecast_daily_nn, 
-          file = "../Forecasts/Raw/forecast_daily_tbats.csv",
-          row.names = FALSE)
 ```
 
-## Model 3
-```{r echo=FALSE}
+## SARIMAX
+
+```{r, eval=FALSE}
+#autofit arimax
+temp_arimax_fit <- auto.arima(load_all_ts,
+                         xreg = temp_all_ts)
+
+#create forecast
+temp_arimax_forecast <- forecast(temp_arimax_fit, 
+                            xreg = tail(temp_all_msts, 59), 
+                            h = 59)
+```
+
+### ARIMAX with Fourier Terms
+
+```{r, eval=FALSE}
 #autofit the arima model
-daily_arima_train <- auto.arima(load_daily_train_msts,
-                                   xreg = fourier(load_daily_train_msts, 
-                                                  K = c(2, 5)), 
-                                   seasonal = FALSE)
+arima_fourier_autofit <- auto.arima(load_all_msts,
+                                    seasonal=FALSE,
+                                    lambda=0,
+                                    xreg=fourier(temp_all_msts,
+                                                 K=c(1,3)))
 
 #create the arima forecast with the autofit
-forecast_daily_arima_train <- forecast(object = daily_arima_train,
-                                   xreg=fourier(load_daily_train_msts,
-                                                K=c(2,5),
-                                                h=50),
-                                   h=59)
-
-#write into csv
-write.csv(forecast_daily_arima_train, 
-         file = "~/Duke_R/TSA_Forecasting/Forecasts/Training/arima.csv",
-         row.names = FALSE)
+forecast_arima_fourier <- forecast(object = arima_fourier_autofit,
+                                   xreg = fourier(tail(temp_all_msts, 59), 
+                                                  K = c(1, 3), 
+                                                  h = 59),
+                                   h = 59)
 ```
 
-## Model 4
+### Neural Network
 
-## Model 5
+```{r, eval=FALSE}
+# Fit the neural net model
+nnetar_fit <- nnetar(load_all_msts, 
+              xreg = temp_all_msts,
+              repeats = 10)
+
+#create forecast
+forecast_nnetar <- forecast(nnetar_fit, 
+                            xreg = tail(temp_all_msts, 59), 
+                            h = 59)
+```
 
 # Performance Evaluation
 
-```{r setup, include=FALSE}
-knitr::opts_knit$set(root.dir = normalizePath("..")) # or your project root
-getwd()
-knitr::include_graphics("./Forecasts/NN_daily_113.png")
+The top 5 models based on training and their test statistics were as follows
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+accuracy <- read.csv('./Forecasts/training_accuracy.csv')
+
+kable(accuracy,
+      caption = "The top five training forecasts based on MAPE")
 ```
 
-include a graph of all 5 forecasts and the performance evaluation table.
+The model forecasts of the top performing models are shown below.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+model1 <- read.csv("./Forecasts/Cleaned_Training/nnetarExo.csv")
+model2 <- read.csv("./Forecasts/Cleaned_Training/nnetarExo_sarimaxTemp.csv")
+model3 <- read.csv("./Forecasts/Cleaned_Training/arimaxFourierTemp_nnetarExo.csv")
+model4 <- read.csv("./Forecasts/Cleaned_Training/nnetarExo_tbats.csv")
+model5 <- read.csv("./Forecasts/Cleaned_Training/nn_nnetarExo.csv")
+
+actualdata <- read.csv("./Data/Processed/dailyload.csv") %>%
+  tail(80)
+
+models_df <- data.frame("date" = as.Date(tail(actualdata$date, 50)),
+                        "NN w. Exo" = model1$x,
+                        "NN w. Exo & SARIMAX" = model2$x,
+                        "NN w. Exo & ARIMAX w. Fourier" = model3$x,
+                        "NN w. Exo & TBATS" = model4$x,
+                        "NN w. Exo & NN" = model5$x) %>%
+  pivot_longer(cols = -date, names_to = "Method", values_to = "load")
+
+
+
+ggplot(data = actualdata, aes(x = as.Date(date), y = daily_average)) +
+  geom_line(color = "black") +
+  geom_line(data = models_df, aes(x = date, y = load, color = Method)) +
+  labs(y = "Average Daily Load",
+       x = "Date",
+       title = "Top Performing Training Forecast Models",
+       color = "Forecast Model")+
+  scale_x_date(date_labels = "%b %Y") 
+```
+
+We had some issues regarding the hourly data sets and uploading our averaged data. Our issues with hourly data sets are described above. The averaging and results ran fine, but we had issues uploading to Kaggle. Our code output produced almost 10,000 averaged model combinations. We were not able to upload all of these. Instead, the top 10 averaged models identified by MAPE on the training set were uploaded. Please note that this will not include any of the averages including hourly data forecasts.
+
+1.    ARIMAX w. Fourier Terms 
+2.    Neural Network
+3.    Neural Network - second version
+4.    Neural Network - second version & TBATS averaged
+5.    ARIMA w. Fourier Terms
 
 # Conclusions
 
-A short paragraph about which were the best models, how well they aligned with 
+The models that performed the best with the training data sets involved a neural network with exogenous factors. It may be that temperature was a good predictor for  These standings were not necessarily replicated within Kaggle - although other neural network models still performed well.

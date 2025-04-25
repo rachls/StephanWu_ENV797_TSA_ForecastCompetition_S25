@@ -157,6 +157,11 @@ for (i in seq_along(avg_names)) {
 }
 
 #save performance data frame
+forecast_save <- rownames_to_column(avg_forecasts_accuracy_best, var = "Model")
 
+#write into csv
+write.csv(forecast_save, 
+         file = here("Forecasts/training_accuracy.csv"),
+         row.names = FALSE)
 ```
 

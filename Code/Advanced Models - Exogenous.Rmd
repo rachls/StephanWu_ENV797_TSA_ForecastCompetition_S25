@@ -33,15 +33,15 @@ load_all_msts <- msts(load_all$daily_average,
                       seasonal.periods =c(7,365.25),
                       start=c(2005,1,1))
 
-temp_train_msts <- msts(temp_train$temperature,
+temp_train_msts <- msts(temp_train$temp,
                         seasonal.periods =c(7,365.25),
                         start=c(2005,1,1))
 
-temp_test_msts <- msts(temp_test$temperature,
+temp_test_msts <- msts(temp_test$temp,
                        seasonal.periods =c(7,365.25),
                        start=c(2005,1,1))
 
-temp_all_msts <- msts(temp_all$temperature,
+temp_all_msts <- msts(temp_all$temp,
                       seasonal.periods =c(7,365.25),
                       start=c(2005,1,1))
 
@@ -58,56 +58,56 @@ humidity_all_msts <- msts(humidity_all$humidity,
                       start=c(2005,1,1))
 
 load_train_ts <- ts(load_train$daily_average,
-                        frequency = ,
+                        frequency = 365.25,
                         start=c(2005,1,1))
 
 load_test_ts <- ts(load_test$daily_average,
-                       seasonal.periods =c(7,365.25),
+                       frequency = 365.25,
                        start=c(2005,1,1))
 
 load_all_ts <- ts(load_all$daily_average,
-                      seasonal.periods =c(7,365.25),
+                      frequency = 365.25,
                       start=c(2005,1,1))
 
-temp_train_ts <- ts(temp_train$temperature,
-                        seasonal.periods =c(7,365.25),
+temp_train_ts <- ts(temp_train$temp,
+                        frequency = 365.25,
                         start=c(2005,1,1))
 
-temp_test_ts <- ts(temp_test$temperature,
-                       seasonal.periods =c(7,365.25),
+temp_test_ts <- ts(temp_test$temp,
+                       frequency = 365.25,
                        start=c(2005,1,1))
 
-temp_all_ts <- ts(temp_all$temperature,
-                      seasonal.periods =c(7,365.25),
+temp_all_ts <- ts(temp_all$temp,
+                      frequency = 365.25,
                       start=c(2005,1,1))
 
 humidity_train_ts <- ts(humidity_train$humidity,
-                        seasonal.periods =c(7,365.25),
+                        frequency = 365.25,
                         start=c(2005,1,1))
 
 humidity_test_ts <- ts(humidity_test$humidity,
-                       seasonal.periods =c(7,365.25),
+                       frequency = 365.25,
                        start=c(2005,1,1))
 
 humidity_all_ts <- ts(humidity_all$humidity,
-                      seasonal.periods =c(7,365.25),
+                      frequency = 365.25,
                       start=c(2005,1,1))
 ```
 
 
 # Temperature
 
-### SARIMAX
+## SARIMAX
 
 ```{r}
 #autofit arimax
-temp_arimax_fit <- auto.arima(load_train_msts,
-                         xreg = temp_train_msts)
+temp_arimax_fit <- auto.arima(load_train_ts,
+                         xreg = temp_train_ts)
 
 #create forecast
 temp_arimax_forecast <- forecast(temp_arimax_fit, 
                             xreg = temp_test_ts, 
-                            h = length(load_test_msts))
+                            h = length(load_test_ts))
 
 #write into csv
 write.csv(temp_arimax_forecast$mean, 
@@ -115,12 +115,12 @@ write.csv(temp_arimax_forecast$mean,
          row.names = FALSE)
 
 #now for whole dataset
-temp_arimax_fit2 <- auto.arima(load_all_msts,
-                         xreg = temp_all_msts)
+temp_arimax_fit2 <- auto.arima(load_all_ts,
+                         xreg = temp_all_ts)
 
 #create forecast
 temp_arimax_forecast <- forecast(temp_arimax_fit2, 
-                            xreg = temp_all_ts, 
+                            xreg = tail(temp_all_msts, 59), 
                             h = 59)
 
 #write into csv
@@ -137,67 +137,72 @@ arima_fourier_autofit <- auto.arima(load_train_msts,
                                     seasonal=FALSE,
                                     lambda=0,
                                     xreg=fourier(temp_train_msts,
-                                                 K=c(2,4)))
+                                                 K=c(1,3)))
 
 #create the arima forecast with the autofit
 forecast_arima_fourier <- forecast(object = arima_fourier_autofit,
-                                   xreg=fourier(temp_train_msts,
-                                                K=c(2,4),
-                                                h=length(tempanom_test_ts)),
-                                   h=length(tempanom_test_ts))
-
+                                   xreg = fourier(temp_train_msts, 
+                                                  K = c(1, 3), 
+                                                  h = length(load_test_msts)),
+                                   h = length(load_test_msts))
 #write into csv
 write.csv(forecast_arima_fourier$mean, 
-         file = here("Forecasts/Temperature/arimaxFourier.csv"),
+         file = here("Forecasts/Training/arimaxFourierTemp.csv"),
+         row.names = FALSE)
+
+#autofit the arima model
+arima_fourier_autofit2 <- auto.arima(load_all_msts,
+                                    seasonal=FALSE,
+                                    lambda=0,
+                                    xreg=fourier(temp_all_msts,
+                                                 K=c(1,3)))
+
+#create the arima forecast with the autofit
+forecast_arima_fourier2 <- forecast(object = arima_fourier_autofit2,
+                                   xreg = fourier(tail(temp_all_msts, 59), 
+                                                  K = c(1, 3), 
+                                                  h = 59),
+                                   h = 59)
+#write into csv
+write.csv(forecast_arima_fourier2$mean, 
+         file = here("Forecasts/Raw/arimaxFourierTemp.csv"),
          row.names = FALSE)
 ```
-
-
 
 ### Neural Network
 
 ```{r}
-#autofit
+# Fit the neural net model
 nnetar_fit <- nnetar(load_train_msts, 
-              xreg = temp_train_msts,
+                     xreg = temp_train_msts,
+                     repeats = 10)
+
+# Forecast next 59 steps using future temp values
+forecast_nnetar <- forecast(nnetar_fit, 
+                            xreg = tail(temp_test_msts, 50), 
+                            h = 50)
+
+# Write forecasts to CSV
+write.csv(forecast_nnetar$mean, 
+          file = here("Forecasts/Training/nnetarExo.csv"),
+          row.names = FALSE)
+
+
+#redo for whole dataset
+nnetar_fit2 <- nnetar(load_all_msts, 
+              xreg = temp_all_msts,
               repeats = 10)
 
 #create forecast
-forecast_nnetar <- forecast(nnetar_fit, 
-                            xreg = temp_test_msts, 
-                            h = length(temp_test))
+forecast_nnetar <- forecast(nnetar_fit2, 
+                            xreg = tail(temp_all_msts, 59), 
+                            h = 59)
 
 #write into csv
 write.csv(forecast_nnetar$mean, 
-         file = here("Forecasts/Temperature/nnetarExo.csv"),
+         file = here("Forecasts/Raw/nnetarExo.csv"),
          row.names = FALSE)
-
-#calculate accuracy metrics
-forecast_nnetar_accuracy <- accuracy(forecast_nnetar$mean, tempanom_test_msts)
 ```
 
-### Random Forest
-
-```{r}
-#create dataframe for test
-rf_train_df <- data.frame("tempanom" = tempanom_train$temp_anomaly,
-                          "temp" = temp_train$average)
-
-rf_test_df <- data.frame("temp" = temp_test$average)
-
-# Fit a Random Forest model
-rf_fit <- randomForest(tempanom ~ ., data = rf_train_df, ntree = 100)
-
-# Make predictions on the test data
-forecast_rf <- predict(rf_fit, newdata = rf_test_df)
-
-#write into csv
-write.csv(forecast_rf, 
-         file = here("Forecasts/Temperature/rfExo.csv"),
-         row.names = FALSE)
-
-#calculate accuracy metrics
-forecast_rf_accuracy <- accuracy(forecast_rf, tempanom_test_msts)
-```
 
 

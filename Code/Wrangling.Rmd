@@ -56,20 +56,20 @@ hourlyload <- readxl::read_xlsx("./Data/Raw/load.xlsx") %>%
     select(-meter_id)
 
 #load exogenous variables
-humidity <- readxl::read_xlsx("./Data/Raw/relative_humidity.xlsx")%>%
-    mutate(date = as.Date(date, format = "%Y-%m-%d")) %>%  
-    rowwise() %>%
-    mutate(humidity = mean(c_across(rh_ws1:rh_ws24), na.rm = TRUE)) %>%  
-    ungroup() %>%
-    select(date, humidity)
+library(dplyr)
+library(readxl)
+
+humidity <- readxl::read_xlsx("./Data/Raw/relative_humidity.xlsx") %>%
+  mutate(date = as.Date(date, format = "%Y-%m-%d")) %>%
+  group_by(date) %>%
+  summarise(humidity = mean(c_across(rh_ws1:rh_ws24), na.rm = TRUE))
+
 
 #load exogenous variables
-temperature <- readxl::read_xlsx("./Data/Raw/temperature.xlsx")%>%
-mutate(date = as.Date(date, format = "%Y-%m-%d")) %>%  
-rowwise() %>%
-mutate(temperature = mean(c_across(t_ws1:t_ws24), na.rm = TRUE)) %>%  
-ungroup() %>%
-select(date, temperature)
+temperature <- readxl::read_xlsx("./Data/Raw/temperature.xlsx") %>%
+  mutate(date = as.Date(date, format = "%Y-%m-%d")) %>%
+  group_by(date) %>%
+  summarise(temp = mean(c_across(t_ws1:t_ws24), na.rm = TRUE))
 ```
 
 ## Section Data
