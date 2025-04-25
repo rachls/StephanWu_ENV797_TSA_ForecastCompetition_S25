@@ -9,6 +9,195 @@ editor_options:
 ---
 
 ```{r}
+#upload test and training data
+load_test <- read.csv("./Data/Processed/dailyload_test.csv")
+load_train <- read.csv("./Data/Processed/dailyload_train.csv")
+load_all <- read.csv("./Data/Processed/dailyload.csv")
+temp_train <- read.csv("./Data/Processed/temp_train.csv")
+temp_test <- read.csv("./Data/Processed/temp_test.csv")
+temp_all <- read.csv("./Data/Processed/temp_all.csv")
+humidity_train <- read.csv("./Data/Processed/humidity_train.csv")
+humidity_test <- read.csv("./Data/Processed/humidity_test.csv")
+humidity_all <- read.csv("./Data/Processed/humidity_all.csv")
 
+#create ts object
+load_train_msts <- msts(load_train$daily_average,
+                        seasonal.periods =c(7,365.25),
+                        start=c(2005,1,1))
+
+load_test_msts <- msts(load_test$daily_average,
+                       seasonal.periods =c(7,365.25),
+                       start=c(2005,1,1))
+
+load_all_msts <- msts(load_all$daily_average,
+                      seasonal.periods =c(7,365.25),
+                      start=c(2005,1,1))
+
+temp_train_msts <- msts(temp_train$temperature,
+                        seasonal.periods =c(7,365.25),
+                        start=c(2005,1,1))
+
+temp_test_msts <- msts(temp_test$temperature,
+                       seasonal.periods =c(7,365.25),
+                       start=c(2005,1,1))
+
+temp_all_msts <- msts(temp_all$temperature,
+                      seasonal.periods =c(7,365.25),
+                      start=c(2005,1,1))
+
+humidity_train_msts <- msts(humidity_train$humidity,
+                        seasonal.periods =c(7,365.25),
+                        start=c(2005,1,1))
+
+humidity_test_msts <- msts(humidity_test$humidity,
+                       seasonal.periods =c(7,365.25),
+                       start=c(2005,1,1))
+
+humidity_all_msts <- msts(humidity_all$humidity,
+                      seasonal.periods =c(7,365.25),
+                      start=c(2005,1,1))
+
+load_train_ts <- ts(load_train$daily_average,
+                        frequency = ,
+                        start=c(2005,1,1))
+
+load_test_ts <- ts(load_test$daily_average,
+                       seasonal.periods =c(7,365.25),
+                       start=c(2005,1,1))
+
+load_all_ts <- ts(load_all$daily_average,
+                      seasonal.periods =c(7,365.25),
+                      start=c(2005,1,1))
+
+temp_train_ts <- ts(temp_train$temperature,
+                        seasonal.periods =c(7,365.25),
+                        start=c(2005,1,1))
+
+temp_test_ts <- ts(temp_test$temperature,
+                       seasonal.periods =c(7,365.25),
+                       start=c(2005,1,1))
+
+temp_all_ts <- ts(temp_all$temperature,
+                      seasonal.periods =c(7,365.25),
+                      start=c(2005,1,1))
+
+humidity_train_ts <- ts(humidity_train$humidity,
+                        seasonal.periods =c(7,365.25),
+                        start=c(2005,1,1))
+
+humidity_test_ts <- ts(humidity_test$humidity,
+                       seasonal.periods =c(7,365.25),
+                       start=c(2005,1,1))
+
+humidity_all_ts <- ts(humidity_all$humidity,
+                      seasonal.periods =c(7,365.25),
+                      start=c(2005,1,1))
 ```
+
+
+# Temperature
+
+### SARIMAX
+
+```{r}
+#autofit arimax
+temp_arimax_fit <- auto.arima(load_train_msts,
+                         xreg = temp_train_msts)
+
+#create forecast
+temp_arimax_forecast <- forecast(temp_arimax_fit, 
+                            xreg = temp_test_ts, 
+                            h = length(load_test_msts))
+
+#write into csv
+write.csv(temp_arimax_forecast$mean, 
+         file = here("Forecasts/Training/sarimaxTemp.csv"),
+         row.names = FALSE)
+
+#now for whole dataset
+temp_arimax_fit2 <- auto.arima(load_all_msts,
+                         xreg = temp_all_msts)
+
+#create forecast
+temp_arimax_forecast <- forecast(temp_arimax_fit2, 
+                            xreg = temp_all_ts, 
+                            h = 59)
+
+#write into csv
+write.csv(temp_arimax_forecast$mean, 
+         file = here("Forecasts/Raw/sarimaxTemp.csv"),
+         row.names = FALSE)
+```
+
+### ARIMAX with Fourier
+
+```{r}
+#autofit the arima model
+arima_fourier_autofit <- auto.arima(load_train_msts,
+                                    seasonal=FALSE,
+                                    lambda=0,
+                                    xreg=fourier(temp_train_msts,
+                                                 K=c(2,4)))
+
+#create the arima forecast with the autofit
+forecast_arima_fourier <- forecast(object = arima_fourier_autofit,
+                                   xreg=fourier(temp_train_msts,
+                                                K=c(2,4),
+                                                h=length(tempanom_test_ts)),
+                                   h=length(tempanom_test_ts))
+
+#write into csv
+write.csv(forecast_arima_fourier$mean, 
+         file = here("Forecasts/Temperature/arimaxFourier.csv"),
+         row.names = FALSE)
+```
+
+
+
+### Neural Network
+
+```{r}
+#autofit
+nnetar_fit <- nnetar(load_train_msts, 
+              xreg = temp_train_msts,
+              repeats = 10)
+
+#create forecast
+forecast_nnetar <- forecast(nnetar_fit, 
+                            xreg = temp_test_msts, 
+                            h = length(temp_test))
+
+#write into csv
+write.csv(forecast_nnetar$mean, 
+         file = here("Forecasts/Temperature/nnetarExo.csv"),
+         row.names = FALSE)
+
+#calculate accuracy metrics
+forecast_nnetar_accuracy <- accuracy(forecast_nnetar$mean, tempanom_test_msts)
+```
+
+### Random Forest
+
+```{r}
+#create dataframe for test
+rf_train_df <- data.frame("tempanom" = tempanom_train$temp_anomaly,
+                          "temp" = temp_train$average)
+
+rf_test_df <- data.frame("temp" = temp_test$average)
+
+# Fit a Random Forest model
+rf_fit <- randomForest(tempanom ~ ., data = rf_train_df, ntree = 100)
+
+# Make predictions on the test data
+forecast_rf <- predict(rf_fit, newdata = rf_test_df)
+
+#write into csv
+write.csv(forecast_rf, 
+         file = here("Forecasts/Temperature/rfExo.csv"),
+         row.names = FALSE)
+
+#calculate accuracy metrics
+forecast_rf_accuracy <- accuracy(forecast_rf, tempanom_test_msts)
+```
+
 
