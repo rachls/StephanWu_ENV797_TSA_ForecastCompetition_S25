@@ -72,6 +72,7 @@ dailyload_test <- tail(dailyload, 50)
 ```{r include=FALSE}
 #UPLOAD FORECASTS WE USED FROM OUR TRAINING MODULES
 ```
+
 # Forecasting Methods
 
 The top 5 models were as follows:
@@ -83,6 +84,33 @@ The top 5 models were as follows:
 5.    model 5
 
 Some models were run on the hourly data, which were averaged into daily loads after forecasting. However, these models had a very long processing time. Therefore, we were unable to use these models to forecast for both the full and training data sets. We ran these models only on the full data set if our computers were able to process them. Thus, they are not included in our top 5 models in this report but they are uploaded onto Kaggle. 
+
+```{r eval=FALSE}
+#upload test and training data
+load_daily <- read.csv("./Data/Processed/dailyload.csv")
+load_hourly <- read.csv("./Data/Processed/hourlyload.csv")
+load_daily_train <- read.csv("./Data/Processed/dailyload_train.csv")
+load_daily_test <- read.csv("./Data/Processed/dailyload_test.csv")
+
+#create msts
+load_daily_msts <- msts(load_daily$daily_average, 
+                            seasonal.periods =c(7,365.25),
+                            start=c(2005,1,1)) 
+
+load_hourly_msts <- msts(load_hourly$load, 
+                            seasonal.periods =c(24,168,8766),
+                            start=c(2005,1,1,1)) %>% #is this the right hour?
+                         na.interp()
+
+load_daily_train_msts <- msts(load_daily_train,
+                              seasonal.periods =c(7,365.25),
+                              start=c(2005,1,1))
+
+load_daily_test_msts <- msts(load_daily_test,
+                             seasonal.periods =c(7,365.25),
+                             start=c(2005,1,1))
+```
+
 
 ## Model 1
 ```{r, eval=FALSE}
@@ -112,9 +140,6 @@ fit_nn_daily_train <- nnetar(as.numeric(load_daily_train_msts))
 forecast_daily_nn_train <- forecast(fit_nn_daily_train, 
                    h=59)
 
-here()
-getwd()
-
 #write into csv
 write.csv(forecast_daily_nn_train, 
           file = "../Forecasts/Training/nn2.csv",
@@ -133,8 +158,40 @@ write.csv(forecast_daily_nn,
 ```
 
 ## Model 2
+```{r, eval=FALSE}
+daily_tbats_fit <- tbats(load_daily_msts)
+
+#forecasting test data
+forecast_daily_tbats <- forecast(daily_tbats_fit, 
+                           h = 59)
+#visualization
+plot(forecast_daily_tbats)
+
+write.csv(forecast_daily_nn, 
+          file = "../Forecasts/Raw/forecast_daily_tbats.csv",
+          row.names = FALSE)
+```
 
 ## Model 3
+```{r echo=FALSE}
+#autofit the arima model
+daily_arima_train <- auto.arima(load_daily_train_msts,
+                                   xreg = fourier(load_daily_train_msts, 
+                                                  K = c(2, 5)), 
+                                   seasonal = FALSE)
+
+#create the arima forecast with the autofit
+forecast_daily_arima_train <- forecast(object = daily_arima_train,
+                                   xreg=fourier(load_daily_train_msts,
+                                                K=c(2,5),
+                                                h=50),
+                                   h=59)
+
+#write into csv
+write.csv(forecast_daily_arima_train, 
+         file = "~/Duke_R/TSA_Forecasting/Forecasts/Training/arima.csv",
+         row.names = FALSE)
+```
 
 ## Model 4
 

@@ -54,6 +54,22 @@ hourlyload <- readxl::read_xlsx("./Data/Raw/load.xlsx") %>%
                  values_to = "load")%>%
     mutate(hour = as.integer(substring(hour,2))) %>%
     select(-meter_id)
+
+#load exogenous variables
+humidity <- readxl::read_xlsx("./Data/Raw/relative_humidity.xlsx")%>%
+    mutate(date = as.Date(date, format = "%Y-%m-%d")) %>%  
+    rowwise() %>%
+    mutate(humidity = mean(c_across(rh_ws1:rh_ws24), na.rm = TRUE)) %>%  
+    ungroup() %>%
+    select(date, humidity)
+
+#load exogenous variables
+temperature <- readxl::read_xlsx("./Data/Raw/temperature.xlsx")%>%
+mutate(date = as.Date(date, format = "%Y-%m-%d")) %>%  
+rowwise() %>%
+mutate(temperature = mean(c_across(t_ws1:t_ws24), na.rm = TRUE)) %>%  
+ungroup() %>%
+select(date, temperature)
 ```
 
 ## Section Data
@@ -63,6 +79,16 @@ dailyload_train <- head(dailyload,
                         (length(dailyload$daily_average)-50))
 
 dailyload_test <- tail(dailyload, 50)
+
+temp_train <- head(temperature,
+                        (length(dailyload$daily_average)-50))
+
+temp_test <- tail(temperature, 50)
+
+humidity_train <- head(humidity,
+                        (length(dailyload$daily_average)-50))
+
+humidity_test <- tail(humidity, 50)
 ```
 
 # Save Processed Data
@@ -75,6 +101,24 @@ write.csv(dailyload_train, file = "~/Duke_R/TSA_Forecasting/Data/Processed/daily
           row.names = FALSE)
 
 write.csv(dailyload_test, file = "~/Duke_R/TSA_Forecasting/Data/Processed/dailyload_test.csv",
+          row.names = FALSE)
+
+write.csv(temp_test, file = "~/Duke_R/TSA_Forecasting/Data/Processed/temp_test.csv",
+          row.names = FALSE)
+
+write.csv(temp_train, file = "~/Duke_R/TSA_Forecasting/Data/Processed/temp_train.csv",
+          row.names = FALSE)
+
+write.csv(temperature, file = "~/Duke_R/TSA_Forecasting/Data/Processed/temp_all.csv",
+          row.names = FALSE)
+
+write.csv(humidity_test, file = "~/Duke_R/TSA_Forecasting/Data/Processed/humidity_test.csv",
+          row.names = FALSE)
+
+write.csv(humidity_train, file = "~/Duke_R/TSA_Forecasting/Data/Processed/humidity_train.csv",
+          row.names = FALSE)
+
+write.csv(humidity, file = "~/Duke_R/TSA_Forecasting/Data/Processed/humidity_all.csv",
           row.names = FALSE)
 
 write.csv(hourlyload, file = "~/Duke_R/TSA_Forecasting/Data/Processed/hourlyload.csv",
