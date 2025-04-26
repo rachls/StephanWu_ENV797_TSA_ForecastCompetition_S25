@@ -8,6 +8,19 @@ editor_options:
   chunk_output_type: console
 ---
 
+```{r libraries, include=FALSE}
+#retrieve libraries
+library(here)
+library(ggplot2)
+library(forecast)
+library(cowplot)
+library(Kendall)
+library(tseries)
+library(kableExtra)
+library(dplyr)
+library(smooth)
+```
+
 ```{r}
 #upload test and training data
 load_test <- read.csv("./Data/Processed/dailyload_test.csv")
@@ -205,4 +218,122 @@ write.csv(forecast_nnetar$mean,
 ```
 
 
+# humidity
+
+## SARIMAX
+
+```{r}
+#autofit arimax
+humidity_arimax_fit <- auto.arima(load_train_ts,
+                         xreg = humidity_train_ts)
+
+#create forecast
+humidity_arimax_forecast <- forecast(humidity_arimax_fit, 
+                            xreg = humidity_test_ts, 
+                            h = length(load_test_ts))
+
+#write into csv
+write.csv(humidity_arimax_forecast$mean, 
+         file = here("Forecasts/Training/sarimaxHumidity.csv"),
+         row.names = FALSE)
+
+#now for whole dataset
+humidity_arimax_fit2 <- auto.arima(load_all_ts,
+                         xreg = humidity_all_ts)
+
+#create forecast
+humidity_arimax_forecast <- forecast(humidity_arimax_fit2, 
+                            xreg = tail(humidity_all_msts, 59), 
+                            h = 59) 
+
+humidity_arimax <- data.frame(date = seq.Date(from = as.Date("2011/01/01"), length.out = 59, by = "day"),
+                              load = humidity_arimax_forecast$mean)
+
+#write into csv
+write.csv(humidity_arimax, 
+         file = here("Forecasts/Raw/sarimaxHumidity.csv"),
+         row.names = FALSE)
+```
+
+### ARIMAX with Fourier
+
+```{r}
+#autofit the arima model
+arima_fourier_autofit <- auto.arima(load_train_msts,
+                                    seasonal=FALSE,
+                                    lambda=0,
+                                    xreg=fourier(humidity_train_msts,
+                                                 K=c(1,3)))
+
+#create the arima forecast with the autofit
+forecast_arima_fourier <- forecast(object = arima_fourier_autofit,
+                                   xreg = fourier(humidity_train_msts, 
+                                                  K = c(1, 3), 
+                                                  h = length(load_test_msts)),
+                                   h = length(load_test_msts))
+#write into csv
+write.csv(forecast_arima_fourier$mean, 
+         file = here("Forecasts/Training/arimaxFourierHumidity.csv"),
+         row.names = FALSE)
+
+#autofit the arima model
+arima_fourier_autofit2 <- auto.arima(load_all_msts,
+                                    seasonal=FALSE,
+                                    lambda=0,
+                                    xreg=fourier(humidity_all_msts,
+                                                 K=c(1,3)))
+
+#create the arima forecast with the autofit
+forecast_arima_fourier2 <- forecast(object = arima_fourier_autofit2,
+                                   xreg = fourier(tail(humidity_all_msts, 59), 
+                                                  K = c(1, 3), 
+                                                  h = 59),
+                                   h = 59)
+
+humidity_arimaF <- data.frame(date = seq.Date(from = as.Date("2011/01/01"), length.out = 59, by = "day"),
+                              load = forecast_arima_fourier2$mean)
+
+#write into csv
+write.csv(humidity_arimaF, 
+         file = here("Forecasts/Raw/arimaxFourierHumidity.csv"),
+         row.names = FALSE)
+```
+
+### Neural Network
+
+```{r}
+# Fit the neural net model
+nnetar_fit <- nnetar(load_train_msts, 
+                     xreg = humidity_train_msts,
+                     repeats = 10)
+
+# Forecast next 59 steps using future humidity values
+forecast_nnetar <- forecast(nnetar_fit, 
+                            xreg = tail(humidity_test_msts, 50), 
+                            h = 50)
+
+# Write forecasts to CSV
+write.csv(forecast_nnetar$mean, 
+          file = here("Forecasts/Training/nnetarExo.csv"),
+          row.names = FALSE)
+
+
+#redo for whole dataset
+nnetar_fit2 <- nnetar(load_all_msts, 
+              xreg = humidity_all_msts,
+              repeats = 10)
+
+#create forecast
+forecast_nnetar <- forecast(nnetar_fit2, 
+                            xreg = tail(humidity_all_msts, 59), 
+                            h = 59)
+
+humidity_nn <- data.frame(date = seq.Date(from = as.Date("2011/01/01"), length.out = 59, by = "day"),
+                              load = forecast_nnetar$mean)
+
+#write into csv
+write.csv(humidity_nn, 
+         file = here("Forecasts/Raw/nnHumidity.csv"),
+         row.names = FALSE)
+```
 
